@@ -1,0 +1,19 @@
+{
+  "problem_description": "Faculty cannot access server",
+  "vlan_config": {
+    "device": "SW1",
+    "configured_vlans": {
+      "10": "Students",
+      "20": "Faculty",
+      "30": "Guests",
+      "40": "Servers"
+    },
+    "expected_vlans": {
+      "10": "Students",
+      "20": "Faculty",
+      "30": "Guests",
+      "40": "Servers"
+    },
+    "trunk_allowed_vlans": [10, 30, 40]
+  }
+}

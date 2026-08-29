@@ -1,0 +1,35 @@
+IP Addressing and DHCP Troubleshooting
+
+A device's default gateway must reside within the same subnet as the device's
+own IP address, or the device will be unable to send traffic off its local
+network — it will send ARP requests for the gateway and receive no reply.
+
+Common IP/DHCP issues:
+
+1. Gateway in wrong subnet: e.g. device IP 192.168.20.15/24 with gateway
+   192.168.30.1 — the gateway is unreachable because it's outside the
+   192.168.20.0/24 network. Symptom: device can reach other hosts on its own
+   subnet but has no connectivity beyond it, including no internet access.
+
+2. Duplicate IP addresses: Two devices configured with the same static IP
+   causes intermittent connectivity, ARP conflicts, and unpredictable which
+   device responds to traffic.
+
+3. DHCP scope exhaustion: When a DHCP pool runs out of available addresses,
+   new devices fail to obtain an IP and may self-assign an APIPA address
+   (169.254.x.x on Windows), which has no gateway and cannot route anywhere.
+
+4. DHCP relay misconfiguration: In networks where DHCP server and clients are
+   on different subnets, the "ip helper-address" command must be configured
+   on the router interface facing the client subnet. Missing this means DHCP
+   requests never reach the server.
+
+Relevant commands:
+- show ip interface brief    -- lists interface IPs and status
+- show ip dhcp binding        -- shows active DHCP leases
+- show ip dhcp conflict        -- shows detected IP conflicts
+
+Fix pattern: For a gateway/subnet mismatch, correct the gateway to fall
+within the device's own subnet, e.g.:
+ip address 192.168.20.15 255.255.255.0
+(gateway should be 192.168.20.1, not a different subnet)

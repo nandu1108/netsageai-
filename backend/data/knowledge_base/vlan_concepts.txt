@@ -1,0 +1,34 @@
+VLAN Concepts and Troubleshooting
+
+A VLAN (Virtual Local Area Network) logically segments a physical network into
+separate broadcast domains. Devices in different VLANs cannot communicate
+without a Layer 3 device (router or Layer 3 switch) performing inter-VLAN routing.
+
+Common VLAN misconfigurations:
+
+1. Missing VLAN on trunk ports: When a VLAN is created on a switch but not
+   included in the "switchport trunk allowed vlan" list on trunk links between
+   switches, devices in that VLAN cannot reach resources on other switches even
+   though the VLAN itself exists locally. Symptom: intermittent or total
+   connectivity failure for devices in that VLAN when trying to reach devices
+   on a different switch.
+
+2. VLAN not assigned to access port: If an access port is left in the default
+   VLAN (often VLAN 1) instead of being assigned to the intended VLAN, the
+   device will be logically isolated in the wrong broadcast domain.
+
+3. Native VLAN mismatch: If trunk ports on either end of a link have different
+   native VLANs configured, this causes VLAN leaking and unpredictable
+   forwarding behavior. Native VLAN mismatches often show up in CDP warnings.
+
+4. VLAN database not propagated (VTP issues): In VTP domains, if a switch is in
+   the wrong VTP mode or domain, VLAN changes made on one switch may not
+   propagate correctly to others.
+
+Relevant commands:
+- show vlan brief          -- lists VLANs and their assigned access ports
+- show interfaces trunk    -- shows trunk ports and their allowed VLAN lists
+- show vtp status          -- shows VTP domain and mode
+
+Fix pattern: If a VLAN is missing from the trunk allowed list, add it with:
+switchport trunk allowed vlan add <vlan_id>

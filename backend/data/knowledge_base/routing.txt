@@ -1,0 +1,34 @@
+Routing Problem Detection
+
+For two hosts on different VLANs or subnets to communicate, a route between
+their networks must exist on a Layer 3 device (router or Layer 3 switch).
+
+Common routing issues:
+
+1. Missing inter-VLAN route: If VLAN 10 and VLAN 40 both exist and have SVIs
+   (switch virtual interfaces) configured, but no route or the SVI is down,
+   traffic between them will fail. This is common when a new VLAN is added
+   but the corresponding SVI or sub-interface is never created.
+
+2. Router-on-a-stick misconfiguration: When using a single physical router
+   interface with sub-interfaces for inter-VLAN routing, each sub-interface
+   must have "encapsulation dot1Q <vlan_id>" matching the VLAN it serves, and
+   the correct IP address for that VLAN's subnet.
+
+3. Missing default route: Devices needing internet access require a default
+   route (0.0.0.0/0) pointing to the ISP-facing interface or upstream router.
+   Without it, traffic to unknown destinations is dropped.
+
+4. Routing protocol neighbor down: In dynamic routing (OSPF, EIGRP), if a
+   neighbor relationship is down (mismatched area, authentication, or hello
+   timers), routes learned from that neighbor disappear from the routing
+   table.
+
+Relevant commands:
+- show ip route             -- displays the routing table
+- show ip interface brief   -- confirms SVI/sub-interface status
+- show ip ospf neighbor     -- checks OSPF adjacency status
+
+Fix pattern: If no route exists between two VLANs, configure inter-VLAN
+routing via SVIs on a Layer 3 switch or sub-interfaces on a router, ensuring
+each has an IP address in the correct subnet and is administratively up.

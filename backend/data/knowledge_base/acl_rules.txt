@@ -1,0 +1,33 @@
+ACL (Access Control List) Security Analysis
+
+ACLs filter traffic based on source/destination address, protocol, and port.
+They are processed top-down, and most platforms have an implicit "deny all"
+at the end of the list.
+
+Common ACL issues:
+
+1. Explicit DENY blocking legitimate traffic: An administrator may add a DENY
+   rule for troubleshooting or security testing and forget to remove it,
+   permanently blocking traffic that should be allowed. Example: "DENY
+   Faculty -> Server" blocks all faculty VLAN traffic to the server subnet.
+
+2. Rule ordering: Because ACLs are processed top-down and stop at the first
+   match, a broad DENY rule placed above a more specific PERMIT rule will
+   block traffic before the PERMIT is ever evaluated.
+
+3. Implicit deny-all: If no explicit rule matches, traffic is dropped by
+   default at the end of the ACL. This can look identical to an explicit
+   DENY from the user's perspective but requires adding a PERMIT rule rather
+   than removing a DENY rule.
+
+4. Wrong interface or direction: An ACL applied "in" vs "out", or on the
+   wrong interface entirely, will not filter the intended traffic and may
+   instead affect unrelated traffic.
+
+Relevant commands:
+- show access-lists           -- lists all ACLs and their rules with hit counts
+- show ip interface <if>      -- shows which ACLs are applied to an interface and in which direction
+
+Fix pattern: If a DENY rule is blocking legitimate traffic, either remove
+that specific DENY line or insert a more specific PERMIT rule above it in
+the ACL sequence.

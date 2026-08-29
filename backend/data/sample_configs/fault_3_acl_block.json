@@ -1,0 +1,7 @@
+{
+  "problem_description": "Faculty cannot access database",
+  "acl_rules": [
+    { "action": "DENY", "source": "Faculty", "destination": "Server" },
+    { "action": "PERMIT", "source": "any", "destination": "any" }
+  ]
+}

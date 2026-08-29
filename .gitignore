@@ -1,0 +1,8 @@
+venv/
+__pycache__/
+*.pyc
+.env
+data/faiss_index/
+data/feedback_log.jsonl
+node_modules/
+dist/
