@@ -5,7 +5,7 @@ knowledge base chunks for a given query.
 
 from pathlib import Path
 from functools import lru_cache
-
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 

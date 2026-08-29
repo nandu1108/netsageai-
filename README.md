@@ -1,110 +1,142 @@
 # NetSage AI
 
-AI-Powered Intelligent Network Troubleshooting and Configuration Assurance Assistant
-for Cisco Packet Tracer-based networks.
+AI-powered troubleshooting assistant for Cisco-style lab networking issues.
 
-This is a **starter scaffold** based on the project documentation (`docs/cisco_ps.pdf`
-concept). It implements the core architecture — deterministic config parsers, a
-RAG pipeline over a Cisco knowledge base, an LLM reasoning layer, and a FastAPI
-backend — so you have a working skeleton to build features on top of.
+This project builds a human-reviewed diagnosis workflow for Packet Tracer problems. Users provide symptoms and evidence such as VLAN configuration, IP settings, routes, ACLs, and show-command output. The app then suggests a likely root cause, affected OSI layer, next command to run, and fix steps. Every diagnosis is reviewed by a human before it is accepted.
 
-## Project Structure
+## What is included
 
-```
-netsage-ai/
+- 32 real-style troubleshooting cases across VLAN, DHCP, routing, ACL, NAT, DNS, and wireless issues
+- Structured AI prompt templates for Cisco diagnosis output
+- Deterministic rule checker for common misconfigurations
+- FastAPI backend for troubleshooting and feedback logging
+- Frontend dashboard for issue summary and human review tracking
+- Responsible AI log with examples where the AI was corrected by a human
+
+## Project structure
+
+```bash
+netsageai-/
 ├── backend/
 │   ├── app/
-│   │   ├── parsers/          # Deterministic Python analysis engine
-│   │   │   ├── vlan_parser.py
-│   │   │   ├── ip_dhcp_parser.py
-│   │   │   ├── routing_parser.py
-│   │   │   └── acl_parser.py
-│   │   ├── rag/               # RAG pipeline (embeddings + FAISS + LLM)
-│   │   │   ├── ingest.py
-│   │   │   ├── retriever.py
-│   │   │   └── reasoner.py
 │   │   ├── api/
-│   │   │   └── routes.py      # FastAPI endpoints
+│   │   ├── checker/
 │   │   ├── models/
-│   │   │   └── schemas.py     # Pydantic request/response models
-│   │   └── main.py            # FastAPI app entrypoint
+│   │   ├── parsers/
+│   │   └── rag/
 │   ├── data/
-│   │   ├── knowledge_base/    # Cisco docs (txt) to embed for RAG
-│   │   └── sample_configs/    # Example VLAN/IP/routing/ACL configs (fault-injected)
+│   │   ├── cases.csv
+│   │   ├── sample_rule_check_cases.json
+│   │   ├── responsible_ai_log.md
+│   │   └── faiss_index/
 │   └── requirements.txt
 ├── frontend/
 │   └── src/
-│       ├── components/        # DiagnosisReport, DashboardStats, ProblemForm
-│       └── pages/             # App.jsx entry
-└── docs/
-    └── cisco_ps.pdf           # Original project brief
+├── diagnose_prompt.md
+├── review_prompt.md
+├── README.md
+└── .gitignore
 ```
+
+## Features implemented
+
+### 1. Case dataset
+A CSV dataset with 32 troubleshooting cases is included in [backend/data/cases.csv](backend/data/cases.csv). Each case contains:
+
+- symptom
+- topology note
+- show output evidence
+- expected fault
+- OSI layer
+- concept tag
+- severity
+
+### 2. AI diagnosis prompt library
+The structured prompt templates are defined in [diagnose_prompt.md](diagnose_prompt.md) and [review_prompt.md](review_prompt.md). These are designed to require evidence-backed JSON outputs with fields such as:
+
+- root cause
+- confidence
+- next command
+- fix steps
+- evidence
+
+### 3. Rule-based checker
+The deterministic Python checker in [backend/app/checker/rule_checker.py](backend/app/checker/rule_checker.py) validates common issues such as:
+
+- duplicate IPs
+- wrong subnet masks
+- gateway mismatch
+- interface down
+- missing VLANs
+- missing routes
+
+### 4. Human review workflow
+The frontend includes a review flow where the diagnosis must be accepted, edited, or rejected by a human. The backend logs outcomes under the feedback endpoint and aggregates them on the dashboard.
+
+### 5. Dashboard summary
+The frontend dashboard displays totals and verdict breakdowns, plus issue-type and severity summaries from the project dataset and feedback log.
 
 ## Setup
 
-### Backend
+### 1. Backend environment
 
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate      # Windows: venv\Scripts\activate
+source venv/bin/activate
 pip install -r requirements.txt
-
-# Add your LLM API key
-export GEMINI_API_KEY="your-key-here"   # or OPENAI_API_KEY
-
-# Build the FAISS index from the knowledge base
-python -m app.rag.ingest
-
-# Run the API
-uvicorn app.main:app --reload
+cp .env.example .env
 ```
 
-API docs available at `http://localhost:8000/docs` once running.
+Then edit the new `.env` file and set your real Gemini key:
 
-### Frontend
+```bash
+GEMINI_API_KEY=your_real_key_here
+```
 
-The `frontend/` folder has component stubs only (this scaffold focuses on the
-AI/backend pipeline, which is the harder engineering problem). Wire these into
-a Vite/CRA React app with Tailwind, pointing API calls at
-`http://localhost:8000`.
+Now build the vector index required by the retrieval layer:
 
-## How the Pipeline Works
+```bash
+python -m app.rag.ingest
+```
 
-1. **User submits a problem** (e.g. "Faculty cannot access server") plus
-   supporting data (VLAN configs, IP settings, routing table, ACL rules).
-2. **Deterministic parsers** (`app/parsers/`) run first — they diff expected
-   vs actual VLANs, check subnet/gateway consistency, look for missing routes,
-   and scan ACL rules for blocking DENY statements. This layer needs no AI and
-   catches the majority of common misconfigurations reliably.
-3. **RAG retrieval** (`app/rag/retriever.py`) takes the parser findings +
-   user complaint, embeds the query, and pulls the most relevant chunks from
-   the Cisco knowledge base via FAISS.
-4. **LLM reasoning** (`app/rag/reasoner.py`) combines retrieved context +
-   parser findings into a prompt, and the LLM returns a structured diagnosis:
-   root cause, affected layer, confidence, fix, and verification steps.
-5. **Feedback** on each diagnosis (Correct / Partially Correct / Wrong) is
-   logged to build an evaluation dataset over time.
+Start the backend:
 
-## Next Steps to Extend This Scaffold
+```bash
+PYTHONPATH=. uvicorn app.main:app --reload
+```
 
-- [ ] Populate `data/knowledge_base/` with real Cisco documentation (VLAN,
-      routing, DHCP, ACL command references)
-- [ ] Add more fault-injection sample configs under `data/sample_configs/`
-- [ ] Build out the React frontend (problem input form, diagnosis report view,
-      dashboard with device/issue stats)
-- [ ] Add a persistence layer (SQLite/Postgres) for feedback logging —
-      currently stubbed to a local JSON file
-- [ ] Wire in real Cisco Packet Tracer exports instead of the sample text configs
-- [ ] Add authentication if this will be multi-user
+### 2. Frontend
 
-## Tech Stack (per project brief)
+```bash
+cd ../frontend
+npm install
+npm run dev
+```
 
-| Component | Technology |
-|---|---|
-| Frontend | React / HTML-CSS-JS, Tailwind CSS |
-| Backend | Python FastAPI |
-| AI | Gemini API / OpenAI API, LangChain, Sentence Transformers |
-| Vector Database | FAISS |
-| Data Processing | Python, Pandas, JSON/YAML parsing |
-| Network Simulation | Cisco Packet Tracer |
+The frontend is configured to use the local backend at `http://localhost:8000/api` by default.
+
+> Do not commit a real `.env` file with your API key. Use `.env.example` as the template and keep your actual key local.
+
+## API endpoints
+
+- POST `/api/troubleshoot` - diagnose a network problem
+- POST `/api/feedback` - log human verdict for a diagnosis
+- GET `/api/dashboard` - view summary metrics and review breakdown
+
+## Responsible AI
+
+The project explicitly includes a human review requirement before any fix is accepted. The log in [backend/data/responsible_ai_log.md](backend/data/responsible_ai_log.md) documents several cases where AI output was edited or rejected by a human reviewer.
+
+## Team / project note
+
+This project follows the NetSage AI assignment goal: AI-assisted troubleshooting with a safety check that keeps a human in the loop for every recommendation.
+
+## Tech stack
+
+- Python + FastAPI
+- React + Vite
+- Gemini API / LLM reasoning
+- FAISS + retrieval
+- CSV-based case dataset
+- Deterministic networking validation rules

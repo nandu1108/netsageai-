@@ -1,0 +1,33 @@
+case_id,symptom,topology_note,show_output,expected_fault,osi_layer,concept,severity
+CASE-001,PC cannot reach server on Faculty VLAN,SW1 missing VLAN 20 on trunk; server network is VLAN 40; gateway is reachable,"SW1# show interfaces trunk -> allowed vlans: 10,30; SW1# show vlan brief -> 10 Students, 30 Guests",Missing VLAN 20 on trunk,Layer 3,VLAN,High
+CASE-002,Student device has no internet access,Gateway 192.168.30.1 is not in same subnet as client,PC1# ipconfig -> IP 192.168.20.15/24; Gateway 192.168.30.1; ping 192.168.30.1 -> Request timed out,Wrong default gateway,Layer 3,Gateway,High
+CASE-003,Faculty cannot access database,ACL denies Faculty to Server on inbound interface,"RTR1# show access-lists -> Extended IP access list ACL-IN, 10 deny tcp 192.168.20.0 0.0.0.255 host 10.0.0.10 eq 3306",ACL deny rule,Layer 4,ACL,High
+CASE-004,Laptop gets APIPA address,DHCP server unreachable from subnet with DHCP helper,PC1# ipconfig -> 169.254.23.14; R1# show ip dhcp binding -> No active bindings,DHCP scope/server issue,Layer 2,DHCP,High
+CASE-005,Branch router cannot reach HQ network,Missing static route to remote LAN,R1# show ip route -> S* 10.0.0.0/8 [1/0] via 192.168.1.1; missing 172.16.0.0/16,Missing route,Layer 3,Routing,High
+CASE-006,VoIP phone has no registered service,Voice VLAN is not enabled on switch port,SW1# show vlan brief -> VLAN 150 missing; SW1# show interfaces fa0/7 switchport -> Access VLAN 1,Missing voice VLAN,Layer 2,VLAN,Medium
+CASE-007,Guest Wi-Fi cannot access internet,Guest SSID mapped to the corporate VLAN,AP1# show dot11 associations -> SSID guest mapped to VLAN 20; guest policy denies outbound,Guest VLAN policy misconfiguration,Security,Wireless,High
+CASE-008,Web server is not reachable from outside,Static NAT rule missing on edge router,RTR0# show ip nat translations -> No translations; show ip nat statistics -> No NAT entries,Missing NAT overload,Layer 3,NAT,High
+CASE-009,PC cannot ping server in VLAN 40,Inter-VLAN routing SVI missing for VLAN 40,R1# show ip interface brief -> Vlan40 is administratively down; vlan 40 missing,Missing SVI,Layer 3,VLAN,High
+CASE-010,Wireless clients fail to get DHCP,Wireless controller not relaying DHCP to server,WLC# show dhcp relay -> No relay configured; AP clients get 169.254...,DHCP relay missing,Layer 2,DHCP,High
+CASE-011,User cannot browse external site even with valid IP,ACL blocks DNS responses,Router# show access-lists -> deny udp any any eq domain,ACL damage,Layer 4,ACL,Medium
+CASE-012,Server cannot reach internet,Source NAT pool exhausted or wrong interface,RTR0# show ip nat translations -> Translation limit reached; NAT pool 10.0.0.1-10.0.0.3,Pool exhaustion,Layer 3,NAT,Medium
+CASE-013,Two PCs cannot communicate even though VLAN matches,Native VLAN mismatch on trunk,SW1# show interfaces trunk -> Native VLAN 1 on both sides; VLAN mismatch,Native VLAN mismatch,Layer 2,VLAN,High
+CASE-014,PC cannot reach default gateway after VLAN change,Port assigned to wrong VLAN,SW1# show mac address-table -> Port Fa0/2 in VLAN 30 but user expected VLAN 20,Port VLAN mismatch,Layer 2,VLAN,High
+CASE-015,Router cannot form OSPF adjacency,Interface not in OSPF area or network statement missing,R1# show ip ospf neighbor -> No neighbors; OSPF process absent,OSPF misconfiguration,Layer 3,Routing,High
+CASE-016,User cannot resolve DNS names,Name server address wrong on client or router,PC1# nslookup google.com -> server unknown; R1# show running-config | section dns,Wrong DNS server,Application,DNS,Medium
+CASE-017,User can reach local subnet but not remote,NAT not configured for inside hosts,show ip route -> No default route; show ip nat translations -> No entries,Missing default route/NAT,Layer 3,NAT,High
+CASE-018,PC gets IP from wrong DHCP pool,Wrong DHCP pool bound to vlan interface,R1# show ip dhcp pool -> Pool 192.168.30.0/24 assigned to VLAN 10 but client on VLAN 20,Wrong DHCP pool assignment,Layer 2,DHCP,High
+CASE-019,Access switch port not forwarding frames,Port is shutdown,SW1# show interface fa0/3 -> administratively down,Shutdown port,Layer 1,Interface,High
+CASE-020,Router cannot route between VLANs,IP mismatch on SVI,R1# show ip interface brief -> Vlan20 192.168.20.2/24; gateway configured as 192.168.20.1 but actual SVI is .2,SVI IP mismatch,Layer 3,VLAN,High
+CASE-021,Guest Wi-Fi can reach internal server,Guest ACL is too permissive,AP1# show access-lists -> permit ip any any,Guest isolation bypass,Security,Wireless,High
+CASE-022,FTP server unreachable due to ACL,ACL blocks port 21 on firewall,RTR1# show access-lists -> deny tcp any host 10.0.0.10 eq ftp,FTP blocked,Layer 4,ACL,Medium
+CASE-023,Client cannot reach printer on same VLAN,DNS names wrong; printer IP reachable by ping,PC1# ping 192.168.50.20 -> Success; nslookup printer -> fail,Host name resolution problem,Application,DNS,Medium
+CASE-024,Branch host cannot reach HQ when default route exists,Firewall ACL blocks return traffic,RTR0# show access-lists -> deny ip 10.0.0.0/8 172.16.0.0/16,Return path blocked,Layer 4,ACL,High
+CASE-025,AP cannot join WLC,Wrong management VLAN or missing trunk,AP1# show capwap summary -> No join; VLAN mismatch,Wireless controller join failure,Layer 2,Wireless,High
+CASE-026,User cannot access server by hostname,No DNS record configured,PC1# nslookup server1 -> Non-existent domain,Missing DNS record,Application,DNS,Medium
+CASE-027,Server on NATed LAN cannot access internet,No PAT configuration on outside interface,RTR0# show ip nat statistics -> PAT disabled; no translations,NAT overload misconfiguration,Layer 3,NAT,High
+CASE-028,PC gets internet but cannot access VPN,Split tunnel policy blocks VPN traffic,Client# traceroute vpn.company.com -> ACL blocked port 500,VPN traffic blocked,Layer 4,Security,Medium
+CASE-029,Switch cannot reach management VLAN,Management SVI missing or wrong IP,SW1# show ip interface brief -> Vlan99 absent,Missing management SVI,Layer 3,VLAN,Medium
+CASE-030,User cannot reach internal email,Mail server in VLAN 60 but no route exists,R1# show ip route -> No route to 10.10.60.0/24,Missing inter-VLAN route,Layer 3,Routing,High
+CASE-031,Wireless guest traffic reaches internal server,Guest WLAN mapped to corporate VLAN and ACL allows internal access,AP1# show wlan summary -> Guest SSID in VLAN 20; ACL permit any any,Guest isolation failure,Security,Wireless,High
+CASE-032,Client cannot ping gateway though IP is valid,Switch port is in wrong VLAN or spanning tree blocked,SW1# show interfaces fa0/12 -> err-disabled,Port err-disabled,Layer 2,VLAN,High

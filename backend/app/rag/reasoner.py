@@ -8,11 +8,28 @@ and retrieved knowledge base context into a prompt, then calls the LLM
 
 import json
 import os
+from pathlib import Path
 
 import google.generativeai as genai
+from dotenv import find_dotenv, load_dotenv
 
 from app.rag.retriever import retrieve_context
 from app.models.schemas import Diagnosis
+
+
+def _load_local_env() -> None:
+    """Load project-level .env values before checking for API keys."""
+    candidates = [
+        Path(__file__).resolve().parents[2] / ".env",
+        Path(__file__).resolve().parents[3] / ".env",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            load_dotenv(candidate, override=False)
+    load_dotenv(find_dotenv(usecwd=True), override=False)
+
+
+_load_local_env()
 
 SYSTEM_INSTRUCTIONS = """\
 You are NetSage AI, an expert Cisco network troubleshooting assistant.
@@ -36,6 +53,28 @@ Do not include any text outside the JSON object. Base your confidence score
 on how directly the parser findings and documentation support the diagnosis —
 do not overstate certainty when the data is ambiguous or incomplete.
 """
+
+
+def _get_model_candidates() -> list[str]:
+    preferred = os.environ.get("GEMINI_MODEL")
+    candidates = []
+    if preferred:
+        candidates.append(preferred)
+    candidates.extend([
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-pro",
+    ])
+
+    seen = set()
+    ordered = []
+    for name in candidates:
+        if name and name not in seen:
+            seen.add(name)
+            ordered.append(name)
+    return ordered
 
 
 def _configure_gemini():
@@ -73,16 +112,28 @@ def generate_diagnosis(
 {context_block}
 """
 
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    response = model.generate_content(prompt)
+    last_error = None
+    for model_name in _get_model_candidates():
+        try:
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content(prompt)
+            raw_text = response.text.strip()
+            # Strip markdown code fences if the model added them despite instructions.
+            if raw_text.startswith("```"):
+                raw_text = raw_text.strip("`")
+                if raw_text.startswith("json"):
+                    raw_text = raw_text[4:]
 
-    raw_text = response.text.strip()
-    # Strip markdown code fences if the model added them despite instructions.
-    if raw_text.startswith("```"):
-        raw_text = raw_text.strip("`")
-        if raw_text.startswith("json"):
-            raw_text = raw_text[4:]
+            parsed = json.loads(raw_text)
+            parsed["source_snippets"] = context_chunks
+            return Diagnosis(**parsed)
+        except Exception as exc:
+            last_error = exc
+            if "404" in str(exc) or "not found" in str(exc).lower():
+                continue
+            raise
 
-    parsed = json.loads(raw_text)
-    parsed["source_snippets"] = context_chunks
-    return Diagnosis(**parsed)
+    raise RuntimeError(
+        f"Unable to generate diagnosis with any supported Gemini model. "
+        f"Last error: {last_error}"
+    )

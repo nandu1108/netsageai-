@@ -1,5 +1,6 @@
 """API routes for NetSage AI."""
 
+import csv
 import json
 import uuid
 from datetime import datetime, timezone
@@ -17,6 +18,21 @@ from app.rag.reasoner import generate_diagnosis
 router = APIRouter()
 
 FEEDBACK_LOG = Path(__file__).resolve().parents[2] / "data" / "feedback_log.jsonl"
+CASES_CSV = Path(__file__).resolve().parents[2] / "data" / "cases.csv"
+
+
+def _case_summary() -> dict:
+    issue_types: dict[str, int] = {}
+    severity: dict[str, int] = {}
+    if CASES_CSV.exists():
+        with CASES_CSV.open("r", encoding="utf-8", newline="") as csv_file:
+            reader = csv.DictReader(csv_file)
+            for row in reader:
+                concept = (row.get("concept") or "Unknown").strip()
+                issue_types[concept] = issue_types.get(concept, 0) + 1
+                sev = (row.get("severity") or "Unknown").strip()
+                severity[sev] = severity.get(sev, 0) + 1
+    return {"issue_type_breakdown": issue_types, "severity_breakdown": severity}
 
 
 @router.post("/troubleshoot", response_model=Diagnosis)
@@ -78,17 +94,32 @@ def submit_feedback(feedback: FeedbackRequest):
 
 @router.get("/dashboard")
 def dashboard_stats():
-    """Simple aggregate stats for the dashboard (Feature: Dashboard)."""
-    if not FEEDBACK_LOG.exists():
-        return {"total_diagnoses": 0, "verdict_breakdown": {}}
-
+    """Aggregate stats for the dashboard: case themes, severity, and human review agreement."""
+    summary = _case_summary()
     verdicts: dict[str, int] = {}
     total = 0
-    with open(FEEDBACK_LOG, encoding="utf-8") as f:
-        for line in f:
-            total += 1
-            entry = json.loads(line)
-            v = entry.get("verdict", "Unknown")
-            verdicts[v] = verdicts.get(v, 0) + 1
+    if FEEDBACK_LOG.exists():
+        with open(FEEDBACK_LOG, encoding="utf-8") as f:
+            for line in f:
+                total += 1
+                entry = json.loads(line)
+                v = entry.get("verdict", "Unknown")
+                verdicts[v] = verdicts.get(v, 0) + 1
 
-    return {"total_diagnoses": total, "verdict_breakdown": verdicts}
+    accepted = verdicts.get("Correct", 0)
+    edited = verdicts.get("Partially Correct", 0)
+    rejected = verdicts.get("Wrong", 0)
+    agreement_rate = (accepted + edited) / total if total else 0
+
+    return {
+        "total_diagnoses": total,
+        "verdict_breakdown": verdicts,
+        "issue_type_breakdown": summary["issue_type_breakdown"],
+        "severity_breakdown": summary["severity_breakdown"],
+        "ai_vs_human_agreement": {
+            "accepted": accepted,
+            "edited": edited,
+            "rejected": rejected,
+            "agreement_rate": round(agreement_rate, 2),
+        },
+    }
